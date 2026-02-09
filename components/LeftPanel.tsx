@@ -41,7 +41,7 @@ export default function LeftPanel({
     }
   };
 
-  const handleParamChange = (paramId: string, value: string) => {
+  const handleParamChange = (paramId: string, value: string | number) => {
     onParamsChange({ ...params, [paramId]: value });
   };
 
