@@ -10,7 +10,7 @@ interface UseRecorderReturn {
   stopRecording: () => Promise<void>;
 }
 
-export function useRecorder(svgRef: RefObject<SVGSVGElement>): UseRecorderReturn {
+export function useRecorder(svgRef: RefObject<SVGSVGElement | null>): UseRecorderReturn {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const recorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);

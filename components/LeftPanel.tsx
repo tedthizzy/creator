@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, type ChangeEvent } from 'react';
-import { templates } from '@/templates/barChartRegistry';
+import { templates } from '@/templates/registry';
 import type { Template, TemplateParams } from '@/templates/registry';
 import type { BarChartFeature } from '@/templates/BarChart';
+import { saveProject, loadAllProjects, deleteProject, createProject, type Project } from '@/lib/projects';
 
 interface LeftPanelProps {
   selectedTemplate: Template | null;
@@ -12,6 +13,7 @@ interface LeftPanelProps {
   onParamsChange: (params: TemplateParams) => void;
   notes: string;
   onNotesChange: (notes: string) => void;
+  onLoadProject?: (project: Project) => void;
 }
 
 export default function LeftPanel({
@@ -21,7 +23,11 @@ export default function LeftPanel({
   onParamsChange,
   notes,
   onNotesChange,
+  onLoadProject,
 }: LeftPanelProps) {
+  const [showProjects, setShowProjects] = useState(false);
+  const [projectName, setProjectName] = useState('');
+  const projects = loadAllProjects();
   const handleTemplateSelect = (e: ChangeEvent<HTMLSelectElement>) => {
     const template = templates.find(t => t.id === e.target.value);
     if (template) {
@@ -79,7 +85,7 @@ export default function LeftPanel({
     >
       {/* Header */}
       <div
-        className="flex-shrink-0 px-4 py-3 border-b"
+        className="flex-shrink-0 px-4 py-3 border-b flex items-center justify-between"
         style={{
           borderColor: 'var(--border-default)',
         }}
@@ -93,7 +99,102 @@ export default function LeftPanel({
         >
           Creator
         </h1>
+        <button
+          onClick={() => setShowProjects(!showProjects)}
+          className="text-sm px-2 py-1 rounded"
+          style={{
+            backgroundColor: 'var(--bg-primary)',
+            border: '1px solid var(--border-default)',
+            color: 'var(--text-primary)',
+            fontFamily: 'var(--font-serif)',
+          }}
+        >
+          {showProjects ? 'Hide' : 'Projects'}
+        </button>
       </div>
+
+      {/* Projects Panel */}
+      {showProjects && (
+        <div
+          className="flex-shrink-0 px-4 py-3 border-b max-h-48 overflow-y-auto"
+          style={{
+            borderColor: 'var(--border-default)',
+            backgroundColor: 'var(--bg-primary)',
+          }}
+        >
+          <div className="flex gap-2 mb-2">
+            <input
+              type="text"
+              value={projectName}
+              onChange={(e) => setProjectName(e.target.value)}
+              placeholder="Project name..."
+              className="flex-1 px-2 py-1 text-sm rounded"
+              style={{
+                backgroundColor: 'var(--bg-surface)',
+                border: '1px solid var(--border-default)',
+                color: 'var(--text-primary)',
+                fontFamily: 'var(--font-serif)',
+              }}
+            />
+            <button
+              onClick={() => {
+                if (selectedTemplate && projectName.trim()) {
+                  const project = createProject(selectedTemplate.id, params, notes, projectName.trim());
+                  saveProject(project);
+                  setProjectName('');
+                }
+              }}
+              disabled={!selectedTemplate || !projectName.trim()}
+              className="px-2 py-1 text-xs rounded"
+              style={{
+                backgroundColor: 'var(--accent-bg)',
+                color: 'var(--accent-teal)',
+                border: '1px solid var(--accent-teal)',
+                fontFamily: 'var(--font-serif)',
+                cursor: selectedTemplate && projectName.trim() ? 'pointer' : 'not-allowed',
+                opacity: selectedTemplate && projectName.trim() ? 1 : 0.5,
+              }}
+            >
+              Save
+            </button>
+          </div>
+          <div className="space-y-1">
+            {projects.map(project => (
+              <div
+                key={project.id}
+                className="flex items-center justify-between p-2 rounded text-sm"
+                style={{
+                  backgroundColor: 'var(--bg-surface)',
+                  border: '1px solid var(--border-default)',
+                }}
+              >
+                <button
+                  onClick={() => {
+                    if (onLoadProject) onLoadProject(project);
+                    setShowProjects(false);
+                  }}
+                  className="flex-1 text-left truncate"
+                  style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-serif)' }}
+                >
+                  {project.name}
+                </button>
+                <button
+                  onClick={() => deleteProject(project.id)}
+                  className="ml-2 px-1 text-xs"
+                  style={{ color: '#ef4444' }}
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+            {projects.length === 0 && (
+              <p className="text-xs text-center" style={{ color: 'var(--text-muted)' }}>
+                No saved projects
+              </p>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Template Picker */}
       <div className="flex-shrink-0 px-4 py-3 border-b" style={{ borderColor: 'var(--border-default)' }}>
@@ -207,6 +308,51 @@ export default function LeftPanel({
                       Remove
                     </button>
                   </div>
+                </div>
+              ))}
+            </div>
+          ) : selectedTemplate.id === 'survey-funnel' ? (
+            <div className="space-y-3">
+              {selectedTemplate.parameters.map(param => (
+                <div key={param.id}>
+                  <label className="block text-sm mb-1" style={{ color: 'var(--text-muted)' }}>
+                    {param.label}
+                  </label>
+                  <input
+                    type="number"
+                    value={params[param.id] ?? param.defaultValue ?? ''}
+                    onChange={(e) => handleParamChange(param.id, parseFloat(e.target.value) || 0)}
+                    className="w-full px-3 py-2 rounded text-sm"
+                    style={{
+                      backgroundColor: 'var(--bg-primary)',
+                      border: '1px solid var(--border-default)',
+                      color: 'var(--text-primary)',
+                      fontFamily: 'var(--font-serif)',
+                    }}
+                  />
+                </div>
+              ))}
+            </div>
+          ) : selectedTemplate.id === 'pie-chart' ? (
+            <div className="space-y-3">
+              {selectedTemplate.parameters.map(param => (
+                <div key={param.id}>
+                  <label className="block text-sm mb-1" style={{ color: 'var(--text-muted)' }}>
+                    {param.label}
+                  </label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    value={params[param.id] ?? param.defaultValue ?? ''}
+                    onChange={(e) => handleParamChange(param.id, parseFloat(e.target.value) || 0)}
+                    className="w-full px-3 py-2 rounded text-sm"
+                    style={{
+                      backgroundColor: 'var(--bg-primary)',
+                      border: '1px solid var(--border-default)',
+                      color: 'var(--text-primary)',
+                      fontFamily: 'var(--font-serif)',
+                    }}
+                  />
                 </div>
               ))}
             </div>

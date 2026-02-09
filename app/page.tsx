@@ -4,9 +4,9 @@ import { useState, useRef } from 'react';
 import SplitPane from '@/components/SplitPane';
 import LeftPanel from '@/components/LeftPanel';
 import RightPanel from '@/components/RightPanel';
-import { templates } from '@/templates/barChartRegistry';
+import { templates } from '@/templates/registry';
 import type { Template, TemplateParams } from '@/templates/registry';
-import type { BarChartFeature } from '@/templates/BarChart';
+import type { Project } from '@/lib/projects';
 
 export default function Home() {
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
@@ -24,15 +24,19 @@ export default function Home() {
     setParams(defaults);
   };
 
+  const handleLoadProject = (project: Project) => {
+    const template = templates.find(t => t.id === project.templateId);
+    if (template) {
+      setSelectedTemplate(template);
+      setParams(project.params);
+      setNotes(project.notes);
+    }
+  };
+
   const handleReplay = () => {
     if (replayRef.current) {
       replayRef.current();
     }
-  };
-
-  // Set up replay callback for BarChart
-  const handleBarChartReplay = (callback: () => void) => {
-    replayRef.current = callback;
   };
 
   return (
@@ -45,6 +49,7 @@ export default function Home() {
           onParamsChange={setParams}
           notes={notes}
           onNotesChange={setNotes}
+          onLoadProject={handleLoadProject}
         />
       }
       right={

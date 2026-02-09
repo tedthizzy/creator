@@ -175,11 +175,6 @@ const BarChart = forwardRef<BarChartHandle, BarChartParams>(
     };
   }, [run]);
 
-  // Find min/max percentages for scaling
-  const minPct = Math.min(...features.map(f => f.pct));
-  const maxPct = Math.max(...features.map(f => f.pct));
-  const pctRange = maxPct - minPct || 1;
-
   return (
     <div
       style={{
@@ -220,9 +215,11 @@ const BarChart = forwardRef<BarChartHandle, BarChartParams>(
         >
           {features.map((f, i) => {
             const y = START_Y + i * ROW_H;
-            // Scale bar width based on percentage relative to min/max
-            const normalizedPct = (f.pct - minPct) / pctRange;
-            const barW = barProgress[i] * normalizedPct * BAR_MAX_W;
+            // Match original formula: (pct - 80) / (89 - 80) for range 80-89
+            const minPct = Math.min(...features.map(f => f.pct));
+            const maxPct = Math.max(...features.map(f => f.pct));
+            const pctRange = maxPct - minPct || 1;
+            const barW = barProgress[i] * ((f.pct - minPct) / pctRange) * BAR_MAX_W;
             const isTeal = i === 0 ? f.highlight : (i === 1 ? secondHighlighted : false);
             const barColor = isTeal ? '#2dd4bf' : '#ffffff';
             const barOpacity = isTeal ? 0.9 : 0.25;

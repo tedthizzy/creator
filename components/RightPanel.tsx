@@ -4,6 +4,8 @@ import { useState, useRef, type ReactNode } from 'react';
 import { useRecorder } from './useRecorder';
 import type { Template, TemplateParams } from '@/templates/registry';
 import type { BarChartFeature, BarChartHandle } from '@/templates/BarChart';
+import type { SurveyFunnelHandle } from '@/templates/SurveyFunnel';
+import type { PieChartHandle } from '@/templates/PieChart';
 
 interface RightPanelProps {
   selectedTemplate: Template | null;
@@ -13,7 +15,7 @@ interface RightPanelProps {
 
 export default function RightPanel({ selectedTemplate, params, onReplay }: RightPanelProps) {
   const svgRef = useRef<SVGSVGElement>(null);
-  const barChartRef = useRef<BarChartHandle>(null);
+  const templateRef = useRef<BarChartHandle | SurveyFunnelHandle | PieChartHandle | null>(null);
   const [recording, setRecording] = useState(false);
   const { startRecording, stopRecording } = useRecorder(svgRef);
 
@@ -22,8 +24,8 @@ export default function RightPanel({ selectedTemplate, params, onReplay }: Right
     startRecording();
     
     // Trigger replay if available
-    if (barChartRef.current) {
-      barChartRef.current.replay();
+    if (templateRef.current) {
+      (templateRef.current as any).replay();
     } else if (onReplay) {
       onReplay();
     }
@@ -45,16 +47,15 @@ export default function RightPanel({ selectedTemplate, params, onReplay }: Right
       );
     }
 
+    const TemplateComponent = selectedTemplate.component;
+    
     if (selectedTemplate.id === 'bar-chart') {
-      const TemplateComponent = selectedTemplate.component;
       let features: BarChartFeature[] = [];
-      
       try {
         features = JSON.parse(params.features as string || '[]') as BarChartFeature[];
       } catch {
         features = [];
       }
-
       if (features.length === 0) {
         return (
           <div className="flex items-center justify-center h-full">
@@ -62,13 +63,42 @@ export default function RightPanel({ selectedTemplate, params, onReplay }: Right
           </div>
         );
       }
-
       return (
         <TemplateComponent
-          ref={barChartRef}
+          ref={templateRef as React.RefObject<BarChartHandle>}
           features={features}
           onReplay={() => {
-            if (barChartRef.current) barChartRef.current.replay();
+            if (templateRef.current) (templateRef.current as BarChartHandle).replay();
+          }}
+          onExport={handleExport}
+          svgRef={svgRef}
+        />
+      );
+    }
+
+    if (selectedTemplate.id === 'survey-funnel') {
+      return (
+        <TemplateComponent
+          ref={templateRef as React.RefObject<SurveyFunnelHandle>}
+          topValue={params.topValue || 8178}
+          middleValue={params.middleValue || 1043}
+          bottomValue={params.bottomValue || 771}
+          onReplay={() => {
+            if (templateRef.current) (templateRef.current as SurveyFunnelHandle).replay();
+          }}
+          onExport={handleExport}
+          svgRef={svgRef}
+        />
+      );
+    }
+
+    if (selectedTemplate.id === 'pie-chart') {
+      return (
+        <TemplateComponent
+          ref={templateRef as React.RefObject<PieChartHandle>}
+          percent={params.percent || 5.4}
+          onReplay={() => {
+            if (templateRef.current) (templateRef.current as PieChartHandle).replay();
           }}
           onExport={handleExport}
           svgRef={svgRef}
@@ -77,8 +107,7 @@ export default function RightPanel({ selectedTemplate, params, onReplay }: Right
     }
 
     // Generic template renderer
-    const TemplateComponent = selectedTemplate.component;
-    return <TemplateComponent {...params} onReplay={onReplay} onExport={handleExport} />;
+    return <TemplateComponent {...params} onReplay={onReplay} onExport={handleExport} svgRef={svgRef} />;
   };
 
   return (
@@ -107,7 +136,7 @@ export default function RightPanel({ selectedTemplate, params, onReplay }: Right
           <div className="flex items-center gap-2">
             <button
               onClick={() => {
-                if (barChartRef.current) barChartRef.current.replay();
+                if (templateRef.current) (templateRef.current as any).replay();
                 else if (onReplay) onReplay();
               }}
               disabled={recording}
